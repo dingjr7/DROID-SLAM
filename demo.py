@@ -14,6 +14,7 @@ import argparse
 
 from torch.multiprocessing import Process
 from droid import Droid
+from lietorch import SE3
 
 import torch.nn.functional as F
 
@@ -55,7 +56,7 @@ def image_stream(imagedir, calib, stride):
         intrinsics[0::2] *= w1 / w0
         intrinsics[1::2] *= h1 / h0
 
-        print(f"{t}: {imfile}")
+        # print(f"{t}: {imfile}")
 
         yield t, image[None], intrinsics
 
@@ -80,6 +81,10 @@ def save_reconstruction(droid, reconstruction_path):
     np.save("reconstructions/{}/images.npy".format(reconstruction_path), images)
     np.save("reconstructions/{}/disps.npy".format(reconstruction_path), disps)
     np.save("reconstructions/{}/poses.npy".format(reconstruction_path), poses)
+    np.save(
+        "reconstructions/{}/scale.npy".format(reconstruction_path),
+        np.array([droid.frontend.scale], dtype=np.float64),
+    )
     np.save("reconstructions/{}/intrinsics.npy".format(reconstruction_path), intrinsics)
 
 

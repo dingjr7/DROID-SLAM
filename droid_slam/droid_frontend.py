@@ -34,6 +34,8 @@ class DroidFrontend:
         self.frontend_thresh = args.frontend_thresh
         self.frontend_radius = args.frontend_radius
 
+        self.p_euroc = args.imagedir.removesuffix("/mav0/cam0/data")
+
     def __update(self):
         """add edges, perform update"""
 
@@ -109,15 +111,21 @@ class DroidFrontend:
         from vins.initial_aligment import VisualIMUAlignment
 
         es = Estimator(
-            self.video.tstamp[: self.t1].detach().cpu(),
-            self.video.poses[: self.t1].detach().cpu().type(torch.float64),
-            "/dataset/EuRoC/MH_01_easy",
+            self.video.tstamp[1 : self.t1].detach().cpu(),
+            self.video.poses[1 : self.t1].detach().cpu().type(torch.float64),
+            self.p_euroc,
         )
         es.process()
         Bgs = torch.zeros((3,), dtype=torch.float64).cpu()
         Bgs, g, x = VisualIMUAlignment(
             es.poses, es.pre_integrations, len(es.pre_integrations), Bgs
         )
+        self.scale = float(x[-1])
+
+        poses = SE3.InitFromVec(self.video.poses[: self.t1].detach()).inv().vec()
+        poses[:, :3] = poses[:, :3] * self.scale
+        self.video.poses[: self.t1] = SE3.InitFromVec(poses).inv().vec()
+        self.video.disps[: self.t1] = self.video.disps[: self.t1] / self.scale
 
         # self.video.normalize()
         self.video.poses[self.t1] = self.video.poses[self.t1 - 1].clone()
